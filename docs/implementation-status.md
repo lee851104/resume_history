@@ -29,7 +29,7 @@
 - Google Provider 已啟用，已驗證授權導向 accounts.google.com 與專案 callback；完整使用者登入驗收尚未記錄。
 - migration 003 已確認存在且拒絕匿名讀取；使用者已完成 SMTP 與 OTP 信件模板設定，實際收信仍待使用者驗收。
 - 本機 `.env.local` 已安全產生 VAULT_RECOVERY_SECRET，Git 忽略且不輸出到聊天。VAULT_EMAIL_RECOVERY_ENABLED 已於本機設為 true；現有帳號需解鎖後啟用自己的復原封存。
-- Vercel Hobby 專案 `resume-history` 已建立並連結 GitHub，正式網址為 https://resume-history.vercel.app 。Production 已配置五個必要環境變數，復原秘密沿用本機且設為 Secret。部署與正式 Google 回呼驗收進行中。
+- Vercel Hobby 專案 `resume-history` 已建立並連結 GitHub，正式網址為 https://resume-history.vercel.app 。Production 已配置五個必要環境變數，復原秘密沿用本機且設為 Secret。正式部署已 Ready，首頁與 session 回應正常，私人 API 拒絕匿名，Google 導向與正式 callback 正確；使用者已確認 Supabase URL 設定。完整登入與收信仍待真實帳號驗收。
 
 詳細設定見 [信箱復原指南](email-recovery-setup.md)。真實驗收需包含收信、過期／重放、Google 登入、另一帳號隔離、同帳號跨裝置同步與原檔下載。
 

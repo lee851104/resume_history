@@ -24,12 +24,14 @@ Google Cloud 的 Authorized redirect URI 仍是 Supabase 專案 callback：https
 
 ## 開放其他 Google 帳號
 
-Google Auth Platform → 目標對象（Audience）確認使用者類型是 External，若 Publishing status 仍為 Testing，需發布為 In production，否則非測試名單的人可能無法登入。每人首次登入建立自己的保險箱；RLS 與 owner 綁定隔離資料，啟用信箱復原者採伺服器保管復原金鑰。
+Google Auth Platform → 目標對象（Audience）確認使用者類型是 External。正式公開使用建議發布為 In production；目前實際 OAuth 只要求 email、profile，依 Google 的基本身分權限例外，即使仍為 Testing，也不要求使用者列於測試名單。公司 Google Workspace 帳號仍可能受組織政策限制。每人首次登入建立自己的保險箱；RLS 與 owner 綁定隔離資料，啟用信箱復原者採伺服器保管復原金鑰。
 
 ## 驗收
 
-外部訪客能開啟首頁；/api/session 顯示已配置而未登入；私人 API 拒絕匿名；Google OAuth 的 redirect_to 是正式 callback；Supabase 允許正式 callback。另需真實 Google 帳號登入、第二帳號隔離、手機同步、履歷下載及驗證碼收信測試。
+外部訪客能開啟首頁；/api/session 顯示已配置而未登入；私人 API 拒絕匿名；Google OAuth 的 redirect_to 是正式 callback；Supabase 允許正式 callback。2026-09-28 正式部署已為 Ready，上述匿名 HTTP 檢查與登入導向已通過；使用者已確認 Supabase 正式 URL 設定。另需真實 Google 帳號登入、第二帳號隔離、手機同步、履歷下載及驗證碼收信測試。
 
 Preview deployments 尚未配置資料庫環境變數，不能當正式服務使用。正式設定與資料庫不跟著 Preview 自動複製。
 
 官方：[Vercel CLI 部署](https://vercel.com/docs/projects/deploy-from-cli)、[Supabase Redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls)。
+
+Google 基本權限例外：[Manage App Audience](https://support.google.com/cloud/answer/15549945)。
