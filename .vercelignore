@@ -1,0 +1,13 @@
+# Local credentials and development artifacts must never enter a deployment upload.
+.env*
+.git/
+.next/
+.vercel/
+node_modules/
+.superpowers/
+.codex/
+.agents/
+artifacts/
+test-results/
+playwright-report/
+*.tsbuildinfo

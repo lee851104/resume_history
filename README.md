@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-程式可在本機預覽。Supabase 公開連線設定、前兩份 migration 與 Google Provider 已設定，OAuth 重新導向已驗證；完整真實登入與跨裝置操作仍需驗收。尚未部署 Vercel。新增 Google 信箱復原需依 [設定指南](docs/email-recovery-setup.md) 完成 migration 003、寄信與伺服器環境變數。
+Vercel 專案 `resume-history` 已連結本儲存庫，正式網址為 https://resume-history.vercel.app 。main 分支推送會觸發部署。Supabase 三份 migration 已建立、Google Provider 已啟用，使用者已完成 SMTP 與 OTP 模板設定；本機及 Vercel Production 已配置信箱復原環境變數。正式網址的登入回呼、Google 對外發布、實際收信與跨裝置操作仍需實際驗收。部署與啟用步驟見 [Vercel 部署說明](docs/vercel-deployment.md) 及 [信箱復原指南](docs/email-recovery-setup.md)。
 
 ## 開發
 
