@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { notifySignOut } from "@/lib/vault/session-events";
 import AccountControls from "@/components/account-controls";
+import { exportApplicationsXlsx } from "@/lib/export/applications-xlsx";
 import ApplicationForm from "./application-form";
 import ApplicationList from "./application-list";
 import JobImportDialog from "./job-import-dialog";
@@ -227,6 +228,26 @@ export default function Dashboard({
       setError((e as Error).message);
     }
   }
+  function exportExcel() {
+    if (!client || loading || !items.length) return;
+    setError("");
+    try {
+      const bytes = exportApplicationsXlsx(items, resumes);
+      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `投遞紀錄-${localDate()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setMessage(`已匯出全部 ${items.length} 筆投遞紀錄`);
+    } catch {
+      setError("Excel 匯出失敗，請稍後再試");
+    }
+  }
   const activeCount = stats.byStatus.applied + stats.byStatus.interviewing;
   return (
     <div className="app-shell">
@@ -370,15 +391,27 @@ export default function Dashboard({
                       : "記下每次投遞，把心力留給下一個機會。"}
               </p>
             </div>
-            <button
-              className="button primary new-button"
-              onClick={() =>
-                view === "prospects" ? setImportOpen(true) : setForm("new")
-              }
-            >
-              <Plus size={18} />
-              {view === "prospects" ? "匯入職缺" : "新增投遞"}
-            </button>
+            <div className="page-actions">
+              {view === "applications" && (
+                <button
+                  className="button secondary export-button"
+                  onClick={exportExcel}
+                  disabled={!client || loading || !items.length}
+                  title="匯出全部投遞紀錄，包含目前篩選外的紀錄"
+                >
+                  <Download size={17} />匯出全部 Excel
+                </button>
+              )}
+              <button
+                className="button primary new-button"
+                onClick={() =>
+                  view === "prospects" ? setImportOpen(true) : setForm("new")
+                }
+              >
+                <Plus size={18} />
+                {view === "prospects" ? "匯入職缺" : "新增投遞"}
+              </button>
+            </div>
           </div>
           {!session.user && (
             <div className="connection-banner">

@@ -6,6 +6,12 @@
 
 Vercel 專案 `resume-history` 已連結本儲存庫，正式網址為 https://resume-history.vercel.app 。main 分支推送會觸發部署。Supabase 三份 migration 已建立、Google Provider 已啟用，使用者已完成 SMTP 與 OTP 模板設定；本機及 Vercel Production 已配置信箱復原環境變數。正式網址的登入回呼、Google 對外發布、實際收信與跨裝置操作仍需實際驗收。部署與啟用步驟見 [Vercel 部署說明](docs/vercel-deployment.md) 及 [信箱復原指南](docs/email-recovery-setup.md)。
 
+## 標題與 Excel 匯出
+
+新增或編輯投遞時，可在職缺連結下方填寫選填的「職缺標題」；列表標題連到原職缺網址。
+
+登入並解鎖後，投遞總覽的「匯出全部 Excel」會下載全部投遞紀錄，不受搜尋與進度篩選影響。檔案包含日期、標題、公司、網址、平台、進度、履歷版本／檔名、追蹤日期、備註及建立／更新時間，可上傳至 Google Sheets。匯出在瀏覽器完成，不包含履歷檔案本體。
+
 ## 開發
 
 需要 Node.js 22.12 以上。

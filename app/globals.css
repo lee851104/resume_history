@@ -2000,3 +2000,14 @@ button.resume-link {
   .account-login { font-size: 12px; padding: 6px 10px; }
   .vault-account-header { padding: 12px 18px; }
 }
+
+.page-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+@media (max-width: 1000px) {
+  .page-heading { flex-wrap: wrap; }
+  .page-actions { flex-wrap: wrap; }
+  .page-actions .new-button { margin-top: 0; }
+}
+@media (max-width: 600px) {
+  .page-actions { width: 100%; }
+  .page-actions .button { min-height: 40px; font-size: 13px; padding: 9px 11px; }
+}

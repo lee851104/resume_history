@@ -107,6 +107,17 @@ export default function ApplicationForm({
             連結會加密保存，不會傳給伺服器讀取職缺。
           </small>
         </div>
+        <div className="field">
+          <label htmlFor="title">職缺標題 <span className="optional">選填</span></label>
+          <input
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={300}
+            placeholder="例如：Python 後端工程師"
+          />
+          <small className="helper">填寫後，列表會以標題顯示職缺連結。</small>
+        </div>
         <ResumePicker
           resumes={resumes}
           value={resumeId}
@@ -162,7 +173,7 @@ export default function ApplicationForm({
         </div>
         <details
           open={
-            !!(item?.notes || item?.company || item?.title || item?.followUpOn)
+            !!(item?.notes || item?.company || item?.followUpOn)
           }
           className="optional-fields"
         >
@@ -178,15 +189,6 @@ export default function ApplicationForm({
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
                 maxLength={200}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="title">職缺名稱</label>
-              <input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                maxLength={300}
               />
             </div>
           </div>

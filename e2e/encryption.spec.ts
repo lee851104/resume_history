@@ -1,4 +1,6 @@
 import { test, expect, Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { unzipSync, strFromU8 } from "fflate";
 import { createVault, encryptJson } from "../lib/crypto/vault";
 import type { VaultRow } from "../lib/crypto/schema";
 const owner = "10000000-0000-4000-8000-000000000001";
@@ -242,4 +244,56 @@ test.beforeEach(async ({ page }) => {
       json: { available: false, enabled: false, message: "信箱復原尚未設定" },
     }),
   );
+});
+
+
+test("optional title links to the job and Excel includes records outside the current filter", async ({ page }, testInfo) => {
+  const keys = await createVault(owner, password);
+  const rid = "20000000-0000-4000-8000-000000000001";
+  const oldUrl = "https://example.com/jobs/existing";
+  const snapshot = {
+    v: 1, prospects: [],
+    applications: [{ id: "30000000-0000-4000-8000-000000000001", jobUrl: oldUrl,
+      title: null, company: null, platform: "example.com", appliedOn: "2026-09-28",
+      status: "applied", resumeId: rid, notes: null, followUpOn: null,
+      createdAt: "2026-09-28T00:00:00Z", updatedAt: "2026-09-28T00:00:00Z" }],
+    resumes: [{ id: rid, originalName: "履歷.pdf", displayName: "Python 版", size: 1234,
+      contentType: "application/pdf", createdAt: "2026-09-28T00:00:00Z" }],
+  };
+  const outgoing = await mockVault(page, {
+    envelope: keys.envelope,
+    payload: await encryptJson(keys.key, owner, keys.envelope.vaultId, snapshot), revision: 0,
+  });
+  await page.goto("/");
+  await page.getByLabel("私人解鎖密碼", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "解鎖", exact: true }).click();
+  await expect(page.getByRole("link", { name: oldUrl, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "新增投遞", exact: true }).click();
+  await expect(page.getByLabel("職缺標題", { exact: false })).toBeVisible();
+  await page.getByLabel("職缺連結").fill("https://example.com/jobs/python");
+  await page.getByLabel("職缺標題", { exact: false }).fill("Python 後端工程師");
+  await page.locator("#resume-select").selectOption(rid);
+  await page.screenshot({ path: `artifacts/${testInfo.project.name}-title-form.png`, fullPage: true });
+  await page.getByRole("button", { name: "儲存投遞", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Python 後端工程師", exact: true })).toHaveAttribute("href", "https://example.com/jobs/python");
+  await page.getByRole("button", { name: "編輯Python 後端工程師", exact: true }).click();
+  await expect(page.getByLabel("職缺標題", { exact: false })).toHaveValue("Python 後端工程師");
+  await page.getByRole("button", { name: "取消", exact: true }).click();
+  await page.getByPlaceholder("搜尋公司、職缺或連結").fill("Python 後端工程師");
+  await expect(page.getByRole("link", { name: oldUrl, exact: true })).not.toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "匯出全部 Excel", exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^投遞紀錄-\d{4}-\d{2}-\d{2}\.xlsx$/);
+  const path = `artifacts/${testInfo.project.name}-applications.xlsx`;
+  await download.saveAs(path);
+  const files = unzipSync(await readFile(path));
+  const xml = strFromU8(files["xl/worksheets/sheet1.xml"]);
+  expect(xml).toContain("Python 後端工程師");
+  expect(xml).toContain(oldUrl);
+  expect(xml).toContain("履歷.pdf");
+  expect(xml.match(/<row /g)).toHaveLength(3);
+  for (const body of outgoing) expect(body).not.toContain("Python 後端工程師");
+  await expect(page.locator("body")).toHaveJSProperty("scrollWidth", await page.evaluate(() => document.documentElement.clientWidth));
+  await page.screenshot({ path: `artifacts/${testInfo.project.name}-excel-export.png`, fullPage: true });
 });
