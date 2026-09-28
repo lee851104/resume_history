@@ -1962,3 +1962,41 @@ button.resume-link {
   color: #7887a2;
   border-radius: 5px;
 }
+
+/* Keep the active Google account visible on desktop and mobile. */
+.topbar-right { min-width: 0; }
+.header-account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 12px;
+}
+.header-account-email {
+  display: block;
+  min-width: 0;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.header-account form { flex-shrink: 0; }
+.account-login { padding: 8px 12px; white-space: nowrap; }
+.vault-account-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 70px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--line);
+  background: white;
+}
+.vault-with-account .vault-screen { min-height: calc(100dvh - 70px); }
+@media (max-width: 600px) {
+  .topbar.authenticated > span { display: none; }
+  .topbar.authenticated .topbar-right { width: 100%; }
+  .topbar.authenticated .header-account { margin-left: auto; }
+  .account-login { font-size: 12px; padding: 6px 10px; }
+  .vault-account-header { padding: 12px 18px; }
+}

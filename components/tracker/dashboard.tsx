@@ -21,6 +21,7 @@ import {
   ListChecks,
 } from "lucide-react";
 import { notifySignOut } from "@/lib/vault/session-events";
+import AccountControls from "@/components/account-controls";
 import ApplicationForm from "./application-form";
 import ApplicationList from "./application-list";
 import JobImportDialog from "./job-import-dialog";
@@ -309,7 +310,7 @@ export default function Dashboard({
         </div>
       </aside>
       <main className="workspace">
-        <header className="topbar">
+        <header className={session.user ? "topbar authenticated" : "topbar"}>
           <span>
             <span className="breadcrumb">我的工作台</span>
             <span className="crumb-sep">/</span>
@@ -328,25 +329,9 @@ export default function Dashboard({
                 鎖定
               </button>
             )}
-            {session.user && (
-              <form
-                action="/auth/logout"
-                method="post"
-                onSubmit={notifySignOut}
-              >
-                <button className="icon-button" aria-label="登出 Google">
-                  <LogOut size={17} />
-                </button>
-              </form>
+            {!configured && (
+              <span className="sync-label"><Cloud size={15} />尚未連接雲端</span>
             )}
-            <span className="sync-label">
-              <Cloud size={15} />
-              {session.user
-                ? "加密儲存"
-                : configured
-                  ? "尚未登入"
-                  : "尚未連接雲端"}
-            </span>
             <button
               className="icon-button"
               onClick={() => {
@@ -358,6 +343,7 @@ export default function Dashboard({
             >
               <RefreshCw size={16} className={loading ? "spin" : ""} />
             </button>
+            <AccountControls session={session} />
           </div>
         </header>
         <div className="main-content">
@@ -407,18 +393,11 @@ export default function Dashboard({
                 </strong>
                 <p>
                   {configured
-                    ? "使用 Google 登入，查看你的投遞紀錄與履歷。"
+                    ? "點選右上角 Google 登入，查看你的投遞紀錄與履歷。"
                     : "連接後，電腦與手機就能共用紀錄、保存與下載履歷。"}
                 </p>
               </div>
-              {configured ? (
-                <a className="button secondary" href="/auth/login">
-                  Google 登入
-                  <ArrowUpRight size={16} />
-                </a>
-              ) : (
-                <span className="setup-pill">尚未設定</span>
-              )}
+              {!configured && <span className="setup-pill">尚未設定</span>}
             </div>
           )}
           {error && (

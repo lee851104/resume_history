@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import Dashboard from "@/components/tracker/dashboard";
 import VaultGate from "./vault-gate";
+import AccountControls from "@/components/account-controls";
 import { VaultClient } from "@/lib/vault/client";
 import { type VaultRow } from "@/lib/crypto/schema";
 import { api } from "@/lib/client-api";
@@ -177,24 +178,29 @@ export default function Workspace() {
   if (!session.user) return <Dashboard session={session} />;
   if (!client)
     return (
-      <VaultGate
-        key={session.user.id + ":" + epoch}
-        owner={session.user.id}
-        row={row}
-        onReady={(key, latest) => {
-          if (
-            generation.current !== epoch ||
-            identity.current !== session.user!.id ||
-            Date.now() - lastActivity.current >= 900_000
-          )
-            return;
-          current.current?.destroy();
-          const next = new VaultClient(session.user!.id, key, latest);
-          current.current = next;
-          setRow(latest);
-          setClient(next);
-        }}
-      />
+      <div className="vault-with-account">
+        <header className="vault-account-header">
+          <AccountControls session={session} />
+        </header>
+        <VaultGate
+          key={session.user.id + ":" + epoch}
+          owner={session.user.id}
+          row={row}
+          onReady={(key, latest) => {
+            if (
+              generation.current !== epoch ||
+              identity.current !== session.user!.id ||
+              Date.now() - lastActivity.current >= 900_000
+            )
+              return;
+            current.current?.destroy();
+            const next = new VaultClient(session.user!.id, key, latest);
+            current.current = next;
+            setRow(latest);
+            setClient(next);
+          }}
+        />
+      </div>
     );
   return (
     <Dashboard
