@@ -30,6 +30,7 @@ export default function Workspace() {
   const lock = useCallback(() => {
     current.current?.destroy();
     current.current = null;
+    lastActivity.current = Date.now();
     generation.current += 1;
     setEpoch(generation.current);
     setClient(null);
@@ -67,7 +68,7 @@ export default function Workspace() {
     void refresh();
     const visible = () => {
       if (document.visibilityState === "visible") {
-        if (current.current && Date.now() - lastActivity.current >= 900_000)
+        if (identity.current && Date.now() - lastActivity.current >= 900_000)
           lock();
         void refresh();
       }
@@ -119,7 +120,8 @@ export default function Workspace() {
     };
   }, [lock, refresh]);
   useEffect(() => {
-    if (!client) return;
+    // Gate screens can hold recovery material before a VaultClient exists.
+    if (!session?.user) return;
     lastActivity.current = Date.now();
     let timer: ReturnType<typeof setTimeout>;
     const schedule = () => {
@@ -146,7 +148,7 @@ export default function Workspace() {
       for (const event of ["pointerdown", "keydown", "wheel", "touchstart"])
         window.removeEventListener(event, activity);
     };
-  }, [client, lock, refresh]);
+  }, [client, session?.user?.id, lock, refresh]);
   if (busy || !session)
     return (
       <main className="vault-screen">
@@ -182,7 +184,8 @@ export default function Workspace() {
         onReady={(key, latest) => {
           if (
             generation.current !== epoch ||
-            identity.current !== session.user!.id
+            identity.current !== session.user!.id ||
+            Date.now() - lastActivity.current >= 900_000
           )
             return;
           current.current?.destroy();

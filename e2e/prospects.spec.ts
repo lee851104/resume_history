@@ -211,3 +211,11 @@ test("a delayed old refresh cannot erase newer shortlist data", async ({
   await page.waitForTimeout(300);
   await expect(page.getByRole("link", { name: "新加入的職缺" })).toBeVisible();
 });
+
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/vault/recovery", (r) =>
+    r.fulfill({
+      json: { available: false, enabled: false, message: "信箱復原尚未設定" },
+    }),
+  );
+});

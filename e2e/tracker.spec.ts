@@ -2,6 +2,9 @@ import { test, expect } from "@playwright/test";
 test("dashboard shows setup honestly and a usable responsive form", async ({
   page,
 }) => {
+  await page.route("**/api/session", (r) =>
+    r.fulfill({ json: { configured: false, user: null } }),
+  );
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "投遞總覽" })).toBeVisible();
   await expect(page.getByText("尚未連接雲端")).toBeVisible();
@@ -25,6 +28,7 @@ test("anonymous requests cannot access encrypted data and legacy plaintext route
 }) => {
   for (const url of [
     "/api/vault",
+    "/api/vault/recovery",
     "/api/sealed-files/00000000-0000-4000-8000-000000000001",
   ]) {
     expect([401, 503]).toContain((await request.get(url)).status());
@@ -36,4 +40,12 @@ test("anonymous requests cannot access encrypted data and legacy plaintext route
   ]) {
     expect((await request.get(url)).status()).toBe(410);
   }
+});
+
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/vault/recovery", (r) =>
+    r.fulfill({
+      json: { available: false, enabled: false, message: "信箱復原尚未設定" },
+    }),
+  );
 });

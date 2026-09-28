@@ -235,3 +235,11 @@ test("authentication failure, another tab logout and inactivity clear the unlock
     page.getByRole("heading", { name: "解鎖私人工作台" }),
   ).toBeVisible();
 });
+
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/vault/recovery", (r) =>
+    r.fulfill({
+      json: { available: false, enabled: false, message: "信箱復原尚未設定" },
+    }),
+  );
+});

@@ -267,3 +267,59 @@ export async function decryptFile(
     ),
   );
 }
+
+/** Explicit enrollment only: this material is sent over HTTPS for server-assisted recovery. */
+export async function exportRecoveryMaterial(
+  owner: string,
+  credential: string,
+  value: unknown,
+  kind: "password" | "recovery",
+) {
+  const e = envelopeSchema.parse(value);
+  const recovery = kind === "recovery" ? recoveryBytes(credential) : null;
+  try {
+    const key = recovery
+      ? await importKey(recovery)
+      : await passwordKey(credential, decode(e.salt));
+    const master = await open(
+      key,
+      recovery ? e.recoveryKey : e.passwordKey,
+      context(owner, e.vaultId, recovery ? "recovery-wrap" : "password-wrap"),
+    );
+    try {
+      if (master.length !== 32) throw new Error("Invalid key");
+      return encode(master);
+    } finally {
+      master.fill(0);
+    }
+  } finally {
+    recovery?.fill(0);
+  }
+}
+export async function importRecoveryMaterial(material: string) {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(material))
+    throw new Error("Invalid recovery material");
+  const raw = decode(material);
+  try {
+    return await importKey(raw);
+  } finally {
+    raw.fill(0);
+  }
+}
+export async function restoreFromMaterial(
+  owner: string,
+  material: string,
+  password: string,
+  value: unknown,
+) {
+  validatePassword(password);
+  const e = envelopeSchema.parse(value);
+  if (!/^[A-Za-z0-9_-]{43}$/.test(material))
+    throw new Error("Invalid recovery material");
+  const raw = decode(material);
+  try {
+    return await wrap(owner, password, e.vaultId, raw);
+  } finally {
+    raw.fill(0);
+  }
+}

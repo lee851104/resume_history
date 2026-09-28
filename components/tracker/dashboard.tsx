@@ -283,7 +283,7 @@ export default function Dashboard({
             <span>
               你的求職紀錄
               <br />
-              <small>解鎖後只在本機讀取</small>
+              <small>資料加密保存，登入後同步</small>
             </span>
           </div>
           <div className="account">
@@ -342,7 +342,7 @@ export default function Dashboard({
             <span className="sync-label">
               <Cloud size={15} />
               {session.user
-                ? "端對端加密"
+                ? "加密儲存"
                 : configured
                   ? "尚未登入"
                   : "尚未連接雲端"}

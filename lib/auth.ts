@@ -6,5 +6,6 @@ export async function requireUser() {
   const db = await createServerSupabase();
   const { data, error } = await db.auth.getUser();
   if (error) throw new HttpError(401, "登入已過期，請重新登入");
-  return { user: requireIdentity(data.user), db };
+  requireIdentity(data.user);
+  return { user: data.user!, db };
 }

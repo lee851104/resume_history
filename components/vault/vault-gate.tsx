@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { notifySignOut } from "@/lib/vault/session-events";
 import {
   LockKeyhole,
@@ -14,11 +14,15 @@ import {
   recoverVault,
   encryptJson,
   decryptJson,
+  exportRecoveryMaterial,
 } from "@/lib/crypto/vault";
 import { type VaultRow } from "@/lib/crypto/schema";
 import { api } from "@/lib/client-api";
 import { emptySnapshot } from "@/lib/vault/client";
 import { snapshotSchema } from "@/lib/vault/snapshot";
+import EmailRecovery from "./email-recovery";
+import EmailEnrollment from "./email-enrollment";
+import type { RecoveryStatus } from "@/lib/recovery/types";
 type Keys = Awaited<ReturnType<typeof createVault>>;
 export default function VaultGate({
   owner,
@@ -29,7 +33,7 @@ export default function VaultGate({
   row: VaultRow | null;
   onReady: (key: CryptoKey, row: VaultRow) => void;
 }) {
-  const [mode, setMode] = useState<"unlock" | "recover">("unlock");
+  const [mode, setMode] = useState<"unlock" | "recover" | "email">("unlock");
   const [password, setPassword] = useState(""),
     [confirm, setConfirm] = useState(""),
     [recovery, setRecovery] = useState("");
@@ -41,6 +45,56 @@ export default function VaultGate({
     creating: boolean;
     row: VaultRow;
   } | null>(null);
+  const [recoveryStatus, setRecoveryStatus] = useState<RecoveryStatus | null>(
+    null,
+  );
+  const [enrollment, setEnrollment] = useState<{
+    key: CryptoKey;
+    row: VaultRow;
+    material: string;
+    email?: string;
+  } | null>(null);
+  useEffect(() => {
+    let active = true;
+    api<RecoveryStatus>("/api/vault/recovery", {
+      headers: { "X-Vault-Owner": owner },
+    })
+      .then((status) => {
+        if (active) setRecoveryStatus(status);
+      })
+      .catch(() => {
+        if (active)
+          setRecoveryStatus({
+            available: false,
+            enabled: false,
+            message: "暫時無法確認信箱復原狀態，請使用私人密碼或離線復原碼",
+          });
+      });
+    return () => {
+      active = false;
+    };
+  }, [owner]);
+  async function finish(
+    key: CryptoKey,
+    latest: VaultRow,
+    credential: string,
+    kind: "password" | "recovery",
+  ) {
+    const status =
+      recoveryStatus ??
+      (await api<RecoveryStatus>("/api/vault/recovery", {
+        headers: { "X-Vault-Owner": owner },
+      }).catch(() => null));
+    if (status?.available && !status.enabled) {
+      const material = await exportRecoveryMaterial(
+        owner,
+        credential,
+        latest.envelope,
+        kind,
+      );
+      setEnrollment({ key, row: latest, material, email: status.email });
+    } else onReady(key, latest);
+  }
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -63,6 +117,7 @@ export default function VaultGate({
           snapshotSchema.parse(
             await decryptJson(keys.key, owner, keys.envelope.vaultId, payload),
           );
+        setSaved(false);
         setPending({
           creating: !row,
           keys,
@@ -80,8 +135,8 @@ export default function VaultGate({
         snapshotSchema.parse(
           await decryptJson(key, owner, row.envelope.vaultId, row.payload),
         );
+        await finish(key, row, password, "password");
         setPassword("");
-        onReady(key, row);
       }
     } catch (e) {
       setError(
@@ -95,7 +150,7 @@ export default function VaultGate({
     }
   }
   async function confirmBackup() {
-    if (!pending || !saved) return;
+    if (!pending || (!saved && !recoveryStatus?.enabled)) return;
     setBusy(true);
     setError("");
     try {
@@ -127,7 +182,12 @@ export default function VaultGate({
           throw error;
         result = latest;
       }
-      onReady(pending.keys.key, result);
+      await finish(
+        pending.keys.key,
+        result,
+        pending.keys.recoveryCode,
+        "recovery",
+      );
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -151,6 +211,19 @@ export default function VaultGate({
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+  if (enrollment)
+    return (
+      <EmailEnrollment
+        owner={owner}
+        vaultId={enrollment.row.envelope.vaultId}
+        material={enrollment.material}
+        email={enrollment.email}
+        onContinue={() => {
+          onReady(enrollment.key, enrollment.row);
+          setEnrollment(null);
+        }}
+      />
+    );
   return (
     <main className="vault-screen">
       <a className="vault-brand" href="/">
@@ -160,24 +233,30 @@ export default function VaultGate({
         <div className="vault-emblem">
           <LockKeyhole size={28} />
         </div>
-        <p className="eyebrow">END-TO-END ENCRYPTED</p>
+        <p className="eyebrow">ENCRYPTED WORKSPACE</p>
         <h1>
           {pending
-            ? "保存你的復原碼"
+            ? recoveryStatus?.enabled
+              ? "密碼已準備好，確認後生效"
+              : "保存你的復原碼"
             : !row
               ? "建立加密保險箱"
-              : mode === "recover"
-                ? "復原保險箱"
-                : "解鎖私人工作台"}
+              : mode === "email"
+                ? "透過 Google 信箱復原"
+                : mode === "recover"
+                  ? "復原保險箱"
+                  : "解鎖私人工作台"}
         </h1>
         <p className="vault-description">
           {pending
-            ? "這組復原碼只在這次顯示。請存到安全的位置，勿交給網站管理員。"
+            ? "這組離線復原碼只在這次顯示，請保存在安全的位置，作為信箱無法使用時的備援。"
             : !row
               ? "設定一組只有你知道的密碼。紀錄與履歷會在裝置上加密後才上傳。"
-              : mode === "recover"
-                ? "使用復原碼設定新密碼，原本的紀錄與履歷會保留。"
-                : "Google 已確認你的身分。輸入私人密碼，才能在這台裝置開啟資料。"}
+              : mode === "email"
+                ? "驗證綁定信箱後即可設定新密碼。"
+                : mode === "recover"
+                  ? "使用復原碼設定新密碼，原本的紀錄與履歷會保留。"
+                  : "Google 已確認你的身分。輸入私人密碼，才能在這台裝置開啟資料。"}
         </p>
         {pending ? (
           <div>
@@ -204,16 +283,18 @@ export default function VaultGate({
                 checked={saved}
                 onChange={(e) => setSaved(e.target.checked)}
               />
-              我已另行保存復原碼，知道管理員無法代為復原
+              {recoveryStatus?.enabled
+                ? "另行保存離線復原碼（選填）"
+                : "我已另行保存離線復原碼"}
             </label>
             <p className="notice">
               {row
                 ? "新密碼與新復原碼會在儲存成功後生效，請替換舊復原碼。"
-                : "密碼與復原碼都遺失時，資料無法救回。"}
+                : "尚未啟用信箱復原前，密碼與復原碼都遺失將無法救回資料。"}
             </p>
             <button
               className="button primary full-width"
-              disabled={!saved || busy}
+              disabled={(!saved && !recoveryStatus?.enabled) || busy}
               onClick={confirmBackup}
             >
               {busy ? (
@@ -224,6 +305,24 @@ export default function VaultGate({
               確認保存並開啟工作台
             </button>
           </div>
+        ) : mode === "email" ? (
+          <EmailRecovery
+            owner={owner}
+            status={recoveryStatus}
+            onBack={() => {
+              setMode("unlock");
+              setError("");
+            }}
+            onRecovered={(keys, latest) => {
+              setSaved(false);
+              setError("");
+              setPending({
+                keys,
+                creating: false,
+                row: { ...latest, envelope: keys.envelope },
+              });
+            }}
+          />
         ) : (
           <form onSubmit={submit}>
             {mode === "recover" && row && (
@@ -286,10 +385,32 @@ export default function VaultGate({
                   ? "重設密碼並產生新復原碼"
                   : "解鎖"}
             </button>
+            {row && mode === "unlock" && (
+              <>
+                <p className="helper" role="status">
+                  {recoveryStatus?.message || "正在確認信箱復原狀態…"}
+                </p>
+                <button
+                  className="vault-text-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setMode("email");
+                    setError("");
+                    setPassword("");
+                    setConfirm("");
+                    setRecovery("");
+                  }}
+                >
+                  忘記密碼？使用 Google 信箱驗證
+                </button>
+              </>
+            )}
             {row && (
               <button
                 className="vault-text-button"
                 type="button"
+                disabled={busy}
                 onClick={() => {
                   setMode(mode === "unlock" ? "recover" : "unlock");
                   setError("");
@@ -311,7 +432,8 @@ export default function VaultGate({
         <div className="vault-footnote">
           <ShieldCheck size={15} />
           <span>
-            密碼、復原碼與解密金鑰不上傳。重新整理或閒置 15 分鐘後需要再解鎖。
+            私人密碼不上傳。啟用信箱復原會由伺服器加密保管解密金鑰。重新整理或閒置
+            15 分鐘後需要再解鎖。
           </span>
         </div>
         <form action="/auth/logout" method="post" onSubmit={notifySignOut}>
